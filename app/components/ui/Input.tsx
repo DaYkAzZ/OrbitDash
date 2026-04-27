@@ -18,7 +18,7 @@ export function Input({ label, error, className = '', id, ...props }: InputProps
         id={inputId}
         {...props}
         className={[
-          'h-9 rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm text-white',
+          'h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground',
           'placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500',
           'disabled:opacity-50',
           error ? 'border-red-500' : '',

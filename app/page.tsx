@@ -1,15 +1,35 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { Navbar, WidgetGrid, FocusZone, FullscreenOverlay } from './components';
-import { useWidgetStore } from './store';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Navbar, WidgetGrid, FocusZone, FullscreenOverlay } from "./components";
+import { useWidgetStore, useAuth } from "./store";
 
 export default function DashboardPage() {
-  const { loadWidgets, isLoading, error, widgets } = useWidgetStore();
+  const { loadWidgets, initRealtime, stopRealtime, isLoading, error, widgets } = useWidgetStore();
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (!user) return;
+
     loadWidgets();
-  }, [loadWidgets]);
+    initRealtime();
+    return () => stopRealtime();
+  }, [authLoading, user, router, loadWidgets, initRealtime, stopRealtime]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <span className="animate-pulse text-sm text-zinc-500">Connexion…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -20,7 +40,9 @@ export default function DashboardPage() {
         <section className="flex-1 overflow-y-auto">
           {isLoading && (
             <div className="flex h-full items-center justify-center">
-              <span className="text-zinc-500 text-sm animate-pulse">Chargement des widgets…</span>
+              <span className="text-zinc-500 text-sm animate-pulse">
+                Chargement des widgets…
+              </span>
             </div>
           )}
 
@@ -34,8 +56,10 @@ export default function DashboardPage() {
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center p-8">
               <span className="text-4xl">🛰️</span>
               <p className="text-zinc-400 text-sm">
-                Aucun widget configuré. Rendez-vous dans{' '}
-                <a href="/admin" className="text-indigo-400 hover:underline">l'admin</a>{' '}
+                Aucun widget configuré. Rendez-vous dans{" "}
+                <a href="/admin" className="text-indigo-400 hover:underline">
+                  l&apos;admin
+                </a>{" "}
                 pour en ajouter.
               </p>
             </div>
@@ -45,7 +69,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Zone centrale de focus */}
-        <aside className="hidden w-80 flex-shrink-0 overflow-y-auto border-l border-zinc-800 p-3 lg:block xl:w-96">
+        <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-zinc-800 p-3 lg:block xl:w-96">
           <FocusZone />
         </aside>
       </main>

@@ -9,6 +9,33 @@
 
 import { supabase } from './supabase';
 import type { Widget } from '../types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+type WidgetRow = {
+  id: string;
+  type: Widget['type'];
+  title: string;
+  position: number;
+  focusable: boolean;
+  fullscreenable: boolean;
+  data: Widget['data'];
+  created_at: string;
+  updated_at: string;
+};
+
+function mapRowToWidget(row: WidgetRow): Widget {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    position: row.position,
+    focusable: row.focusable,
+    fullscreenable: row.fullscreenable,
+    data: row.data,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 // ─── Lecture ──────────────────────────────────────────────────────────────────
 
@@ -19,7 +46,7 @@ export async function fetchWidgets(): Promise<Widget[]> {
     .order('position', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Widget[];
+  return ((data ?? []) as WidgetRow[]).map(mapRowToWidget);
 }
 
 export async function fetchWidgetById(id: string): Promise<Widget> {
@@ -30,7 +57,7 @@ export async function fetchWidgetById(id: string): Promise<Widget> {
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Widget;
+  return mapRowToWidget(data as WidgetRow);
 }
 
 // ─── Création ─────────────────────────────────────────────────────────────────
@@ -45,7 +72,7 @@ export async function createWidget(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Widget;
+  return mapRowToWidget(data as WidgetRow);
 }
 
 // ─── Mise à jour ──────────────────────────────────────────────────────────────
@@ -62,7 +89,7 @@ export async function updateWidget(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Widget;
+  return mapRowToWidget(data as WidgetRow);
 }
 
 // ─── Suppression ──────────────────────────────────────────────────────────────
@@ -87,4 +114,19 @@ export async function swapWidgetPositions(
     pos_b: posB,
   });
   if (error) throw new Error(error.message);
+}
+
+export function subscribeToWidgets(onChange: () => void): RealtimeChannel {
+  return supabase
+    .channel('widgets-live-updates')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'widgets' },
+      () => onChange()
+    )
+    .subscribe();
+}
+
+export function unsubscribeFromWidgets(channel: RealtimeChannel): void {
+  supabase.removeChannel(channel);
 }

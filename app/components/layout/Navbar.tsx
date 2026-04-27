@@ -7,12 +7,12 @@ import { Button } from '../ui';
 
 export function Navbar() {
   const { mode, toggleMode } = useTheme();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
 
   return (
-    <nav className="flex h-14 items-center justify-between border-b border-zinc-800 px-6">
+    <nav className="flex h-14 items-center justify-between border-b border-border px-6">
       <div className="flex items-center gap-3">
-        <span className="text-lg font-bold text-white tracking-tight">
+        <span className="text-lg font-bold text-foreground tracking-tight">
           🛰️ OrbitDash
         </span>
       </div>
@@ -35,7 +35,12 @@ export function Navbar() {
         </button>
 
         {user && (
-          <span className="text-xs text-zinc-500">{user.displayName ?? user.email}</span>
+          <>
+            <span className="text-xs text-zinc-500">{user.displayName ?? user.email}</span>
+            <Button variant="ghost" size="sm" onClick={logout}>
+              Déconnexion
+            </Button>
+          </>
         )}
       </div>
     </nav>

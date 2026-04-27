@@ -1,8 +1,16 @@
 // ─── Widget Types ────────────────────────────────────────────────────────────
 
-export type WidgetMode = 'inplace' | 'focus' | 'fullscreen';
+export type WidgetMode = "inplace" | "focus" | "fullscreen";
 
-export type WidgetType = 'clock' | 'poll' | 'rss' | 'crypto' | 'note';
+export type WidgetType =
+  | "clock"
+  | "poll"
+  | "rss"
+  | "crypto"
+  | "note"
+  | "stock"
+  | "weather"
+  | "ainews";
 
 // Data spécifiques à chaque type de widget
 export interface ClockWidgetData {
@@ -20,7 +28,7 @@ export interface PollOption {
 export interface PollWidgetData {
   question: string;
   options: PollOption[];
-  expiresAt?: string; // ISO date
+  expiresAt?: string;
   allowMultiple: boolean;
 }
 
@@ -35,11 +43,44 @@ export interface NoteWidgetData {
   color: string;
 }
 
+// ── Bourse ───────────────────────────────────────────────────────────────────
+export interface StockWidgetData {
+  /** Symbole Finnhub, ex: "^FCHI" pour CAC40 */
+  symbol: string;
+  /** Nom affiché */
+  label: string;
+  /** Couleur d'accent hex */
+  accentColor?: string;
+}
+
+// ── Météo ─────────────────────────────────────────────────────────────────────
+export interface WeatherWidgetData {
+  /** Nom de la ville tel que l'API Open-Meteo la reconnaît */
+  city: string;
+  /** Latitude */
+  lat: number;
+  /** Longitude */
+  lon: number;
+  /** Unité de température : "celsius" | "fahrenheit" */
+  unit: "celsius" | "fahrenheit";
+}
+
+// ── Actus IA ──────────────────────────────────────────────────────────────────
+export interface AiNewsWidgetData {
+  /** Nombre max d'articles affichés en focus */
+  maxItems: number;
+  /** Mots-clés de recherche */
+  keywords: string;
+}
+
 export type WidgetData =
   | ClockWidgetData
   | PollWidgetData
   | RssWidgetData
   | NoteWidgetData
+  | StockWidgetData
+  | WeatherWidgetData
+  | AiNewsWidgetData
   | Record<string, unknown>;
 
 // Contrat d'interface principal pour un widget
@@ -47,9 +88,9 @@ export interface Widget {
   id: string;
   type: WidgetType;
   title: string;
-  position: number;        // position dans la grille (0-based)
-  focusable: boolean;      // peut-il apparaître en zone centrale ?
-  fullscreenable: boolean; // peut-il passer en plein écran ?
+  position: number;
+  focusable: boolean;
+  fullscreenable: boolean;
   data: WidgetData;
   createdAt: string;
   updatedAt: string;
@@ -59,7 +100,7 @@ export interface Widget {
 export interface WidgetProps {
   widget: Widget;
   mode: WidgetMode;
-  onFocus?: () => void;      // demande à passer en focus
-  onFullscreen?: () => void; // demande à passer en fullscreen
-  onClose?: () => void;      // fermer le focus/fullscreen
+  onFocus?: () => void;
+  onFullscreen?: () => void;
+  onClose?: () => void;
 }

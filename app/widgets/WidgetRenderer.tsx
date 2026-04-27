@@ -11,15 +11,18 @@
 import type { WidgetProps } from '../types';
 import { ClockWidget } from './Clock';
 import { PollWidget } from './Poll';
+import { StockWidget } from './Stock';
+import { WeatherWidget } from './Weather';
+import { AiNewsWidget } from './AiNews';
 
 type WidgetComponent = (props: WidgetProps) => React.ReactElement | null;
 
 const WIDGET_MAP: Record<string, WidgetComponent> = {
   clock: ClockWidget,
   poll: PollWidget,
-  // rss: RssWidget,
-  // crypto: CryptoWidget,
-  // note: NoteWidget,
+  stock: StockWidget,
+  weather: WeatherWidget,
+  ainews: AiNewsWidget,
 };
 
 export function WidgetRenderer(props: WidgetProps) {

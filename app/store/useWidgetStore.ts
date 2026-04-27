@@ -10,12 +10,15 @@
 
 import { create } from 'zustand';
 import type { Widget, WidgetData } from '../types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   fetchWidgets,
   createWidget,
   updateWidget,
   deleteWidget,
   swapWidgetPositions,
+  subscribeToWidgets,
+  unsubscribeFromWidgets,
 } from '../services';
 
 interface WidgetStore {
@@ -25,9 +28,12 @@ interface WidgetStore {
   fullscreenWidgetId: string | null;
   isLoading: boolean;
   error: string | null;
+  realtimeChannel: RealtimeChannel | null;
 
   // ── Chargement ──────────────────────────────────────────────────────────────
   loadWidgets: () => Promise<void>;
+  initRealtime: () => void;
+  stopRealtime: () => void;
 
   // ── Focus / Fullscreen ──────────────────────────────────────────────────────
   setFocus: (id: string | null) => void;
@@ -49,6 +55,7 @@ export const useWidgetStore = create<WidgetStore>((set, get) => ({
   fullscreenWidgetId: null,
   isLoading: false,
   error: null,
+  realtimeChannel: null,
 
   // ── Chargement ──────────────────────────────────────────────────────────────
   loadWidgets: async () => {
@@ -59,6 +66,24 @@ export const useWidgetStore = create<WidgetStore>((set, get) => ({
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
     }
+  },
+
+  initRealtime: () => {
+    const existing = get().realtimeChannel;
+    if (existing) return;
+
+    const channel = subscribeToWidgets(() => {
+      get().loadWidgets();
+    });
+
+    set({ realtimeChannel: channel });
+  },
+
+  stopRealtime: () => {
+    const channel = get().realtimeChannel;
+    if (!channel) return;
+    unsubscribeFromWidgets(channel);
+    set({ realtimeChannel: null });
   },
 
   // ── Focus / Fullscreen ──────────────────────────────────────────────────────

@@ -17,18 +17,28 @@ interface ThemeContextValue extends Theme {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>('dark');
-  const [density, setDensityState] = useState<ThemeDensity>('spaced');
-
-  // Lit le localStorage au montage
-  useEffect(() => {
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'dark';
     const saved = localStorage.getItem('orbitdash-theme');
-    if (saved) {
+    if (!saved) return 'dark';
+    try {
       const parsed = JSON.parse(saved) as Theme;
-      setModeState(parsed.mode);
-      setDensityState(parsed.density);
+      return parsed.mode ?? 'dark';
+    } catch {
+      return 'dark';
     }
-  }, []);
+  });
+  const [density, setDensityState] = useState<ThemeDensity>(() => {
+    if (typeof window === 'undefined') return 'spaced';
+    const saved = localStorage.getItem('orbitdash-theme');
+    if (!saved) return 'spaced';
+    try {
+      const parsed = JSON.parse(saved) as Theme;
+      return parsed.density ?? 'spaced';
+    } catch {
+      return 'spaced';
+    }
+  });
 
   // Applique les classes sur <html>
   useEffect(() => {

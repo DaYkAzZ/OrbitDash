@@ -15,7 +15,7 @@ import { Button, Input, Card } from '../components/ui';
 import type { Widget } from '../types';
 
 export default function AdminPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const { widgets, loadWidgets, editWidget, removeWidget, addWidget, isLoading } =
     useWidgetStore();
 
@@ -27,9 +27,17 @@ export default function AdminPage() {
   }, [loadWidgets]);
 
   // Garde admin
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <span className="animate-pulse text-sm text-zinc-500">Vérification des droits…</span>
+      </div>
+    );
+  }
+
   if (!user || !isAdmin) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-zinc-900">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
         <p className="text-zinc-400">Accès réservé aux administrateurs.</p>
         <Link href="/">
           <Button variant="ghost">← Retour au dashboard</Button>
@@ -77,10 +85,43 @@ export default function AdminPage() {
     });
   };
 
+  const handleAddStock = async () => {
+    await addWidget({
+      type: 'stock',
+      title: 'Marchés',
+      position: widgets.length,
+      focusable: true,
+      fullscreenable: true,
+      data: { symbol: 'AAPL', label: 'Apple', accentColor: '#6366f1' },
+    });
+  };
+
+  const handleAddWeather = async () => {
+    await addWidget({
+      type: 'weather',
+      title: 'Météo',
+      position: widgets.length,
+      focusable: true,
+      fullscreenable: true,
+      data: { city: 'Paris', lat: 48.8566, lon: 2.3522, unit: 'celsius' },
+    });
+  };
+
+  const handleAddAiNews = async () => {
+    await addWidget({
+      type: 'ainews',
+      title: 'Actus IA',
+      position: widgets.length,
+      focusable: true,
+      fullscreenable: true,
+      data: { maxItems: 20, keywords: 'intelligence artificielle OR AI OR machine learning' },
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="flex h-14 items-center justify-between border-b border-zinc-800 px-6">
+      <header className="flex h-14 items-center justify-between border-b border-border px-6">
         <h1 className="text-lg font-bold">⚙ Administration</h1>
         <Link href="/">
           <Button variant="ghost" size="sm">← Dashboard</Button>
@@ -100,6 +141,15 @@ export default function AdminPage() {
             <Button onClick={handleAddPoll} variant="secondary" size="sm">
               + Sondage
             </Button>
+            <Button onClick={handleAddStock} variant="secondary" size="sm">
+              + Bourse
+            </Button>
+            <Button onClick={handleAddWeather} variant="secondary" size="sm">
+              + Météo
+            </Button>
+            <Button onClick={handleAddAiNews} variant="secondary" size="sm">
+              + Actus IA
+            </Button>
           </div>
         </Card>
 
@@ -114,7 +164,7 @@ export default function AdminPage() {
           )}
 
           {!isLoading && widgets.length === 0 && (
-            <p className="text-sm text-zinc-500">Aucun widget pour l'instant.</p>
+            <p className="text-sm text-zinc-500">Aucun widget pour l&apos;instant.</p>
           )}
 
           <div className="flex flex-col divide-y divide-zinc-700/50">
@@ -133,7 +183,7 @@ export default function AdminPage() {
                 ) : (
                   <>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-white">{widget.title}</span>
+                      <span className="text-sm font-medium text-foreground">{widget.title}</span>
                       <span className="text-xs text-zinc-500">
                         {widget.type} · pos {widget.position}
                         {widget.focusable && ' · focusable'}

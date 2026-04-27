@@ -12,7 +12,7 @@ export function Card({ children, className = '', onClick, hoverable = false }: C
     <div
       onClick={onClick}
       className={[
-        'rounded-2xl border border-zinc-700/50 bg-zinc-800/60 backdrop-blur-sm',
+        'rounded-2xl border border-border bg-surface/80 backdrop-blur-sm',
         hoverable ? 'cursor-pointer transition-all hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10' : '',
         className,
       ].join(' ')}
