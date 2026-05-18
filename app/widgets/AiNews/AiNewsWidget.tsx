@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * AiNewsWidget – dernières actualités sur l'IA via NewsAPI.
@@ -15,9 +15,9 @@
  *  - fullscreen : liste complète avec image
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import type { WidgetProps, AiNewsWidgetData } from '../../types';
-import { Card } from '../../components/ui';
+import { useEffect, useState, useCallback } from "react";
+import type { WidgetProps, AiNewsData } from "../../types";
+import { Card } from "../../components/ui";
 
 interface Article {
   title: string;
@@ -35,8 +35,14 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(diff / 86400)}j`;
 }
 
-export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: WidgetProps) {
-  const data = widget.data as AiNewsWidgetData;
+export function AiNewsWidget({
+  widget,
+  mode,
+  onFocus,
+  onFullscreen,
+  onClose,
+}: WidgetProps) {
+  const data = widget.data as AiNewsData;
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +51,12 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
     try {
       setLoading(true);
       // Appel via notre proxy Next.js (évite le blocage CORS de NewsAPI)
+      const keywords = Array.isArray(data.keywords)
+        ? data.keywords.join(" OR ")
+        : String(data.keywords);
+      const pageSize = 20; // Default limit
       const res = await fetch(
-        `/api/ainews?q=${encodeURIComponent(data.keywords)}&pageSize=${data.maxItems}`
+        `/api/ainews?q=${encodeURIComponent(keywords)}&pageSize=${pageSize}`,
       );
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const json = await res.json();
@@ -57,7 +67,7 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
     } finally {
       setLoading(false);
     }
-  }, [data.keywords, data.maxItems]);
+  }, [data.keywords]);
 
   useEffect(() => {
     const run = window.setTimeout(fetchNews, 0);
@@ -81,7 +91,9 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
       <Card className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
         <span className="text-2xl">📰</span>
         <p className="text-xs text-red-400">{error}</p>
-        <p className="text-xs text-zinc-600">Vérifiez NEXT_PUBLIC_NEWSAPI_KEY</p>
+        <p className="text-xs text-zinc-600">
+          Vérifiez NEXT_PUBLIC_NEWSAPI_KEY
+        </p>
       </Card>
     );
   }
@@ -89,11 +101,11 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
   const first = articles[0];
 
   // ── In-place ──────────────────────────────────────────────────────────────
-  if (mode === 'inplace') {
+  if (mode === "compact") {
     return (
       <Card
-        hoverable={widget.focusable}
-        onClick={widget.focusable ? onFocus : undefined}
+        hoverable={true}
+        onClick={onFocus}
         className="flex h-full flex-col justify-between gap-2 p-4"
       >
         <div className="flex items-center gap-1">
@@ -120,16 +132,26 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
   }
 
   // ── Focus ─────────────────────────────────────────────────────────────────
-  if (mode === 'focus') {
+  if (mode === "focus") {
     return (
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">🤖 Actus IA</h2>
           <div className="flex gap-2">
             {widget.fullscreenable && (
-              <button onClick={onFullscreen} className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground">⛶</button>
+              <button
+                onClick={onFullscreen}
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground"
+              >
+                ⛶
+              </button>
             )}
-            <button onClick={onClose} className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground">✕</button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground"
+            >
+              ✕
+            </button>
           </div>
         </div>
 
@@ -146,7 +168,9 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
                 {article.title}
               </p>
               {article.description && (
-                <p className="text-xs text-zinc-500 line-clamp-2">{article.description}</p>
+                <p className="text-xs text-zinc-500 line-clamp-2">
+                  {article.description}
+                </p>
               )}
               <p className="text-xs text-zinc-500">
                 {article.source.name} · {timeAgo(article.publishedAt)}
@@ -179,7 +203,7 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
                 src={article.urlToImage}
                 alt=""
                 className="h-32 w-full object-cover"
-                onError={(e) => (e.currentTarget.style.display = 'none')}
+                onError={(e) => (e.currentTarget.style.display = "none")}
               />
             )}
             <div className="flex flex-col gap-1 p-3">
@@ -187,7 +211,9 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
                 {article.title}
               </p>
               {article.description && (
-                <p className="text-xs text-zinc-400 line-clamp-2">{article.description}</p>
+                <p className="text-xs text-zinc-400 line-clamp-2">
+                  {article.description}
+                </p>
               )}
               <p className="text-xs text-zinc-500 mt-1">
                 {article.source.name} · {timeAgo(article.publishedAt)}
@@ -197,7 +223,10 @@ export function AiNewsWidget({ widget, mode, onFocus, onFullscreen, onClose }: W
         ))}
       </div>
 
-      <button onClick={onClose} className="mx-auto text-sm text-zinc-500 hover:text-white">
+      <button
+        onClick={onClose}
+        className="mx-auto text-sm text-zinc-500 hover:text-white"
+      >
         Quitter le plein écran
       </button>
     </div>

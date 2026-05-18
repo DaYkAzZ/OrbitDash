@@ -1,35 +1,41 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import type { WidgetProps } from '../../types';
-import type { ClockWidgetData } from '../../types';
-import { Card } from '../../components/ui';
+import { useState, useEffect } from "react";
+import type { WidgetProps } from "../../types";
+import type { ClockData } from "../../types";
+import { Card } from "../../components/ui";
 
 function getTime(timezone: string, format24h: boolean, showSeconds: boolean) {
   const opts: Intl.DateTimeFormatOptions = {
     timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: !format24h,
-    ...(showSeconds ? { second: '2-digit' } : {}),
+    ...(showSeconds ? { second: "2-digit" } : {}),
   };
-  return new Date().toLocaleTimeString('fr-FR', opts);
+  return new Date().toLocaleTimeString("fr-FR", opts);
 }
 
 function getDate(timezone: string) {
-  return new Date().toLocaleDateString('fr-FR', {
+  return new Date().toLocaleDateString("fr-FR", {
     timeZone: timezone,
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
-export function ClockWidget({ widget, mode, onFocus, onFullscreen, onClose }: WidgetProps) {
-  const data = widget.data as ClockWidgetData;
-  const [time, setTime] = useState('');
-  const [date, setDate] = useState('');
+export function ClockWidget({
+  widget,
+  mode,
+  onFocus,
+  onFullscreen,
+  onClose,
+}: WidgetProps) {
+  const data = widget.data as ClockData;
+  const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
 
   useEffect(() => {
     const tick = () => {
@@ -42,11 +48,11 @@ export function ClockWidget({ widget, mode, onFocus, onFullscreen, onClose }: Wi
   }, [data]);
 
   // ── In-place (vue grille) ──────────────────────────────────────────────────
-  if (mode === 'inplace') {
+  if (mode === "compact") {
     return (
       <Card
-        hoverable={widget.focusable}
-        onClick={widget.focusable ? onFocus : undefined}
+        hoverable={true}
+        onClick={onFocus}
         className="flex h-full flex-col items-center justify-center gap-1 p-4"
       >
         <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">
@@ -59,7 +65,7 @@ export function ClockWidget({ widget, mode, onFocus, onFullscreen, onClose }: Wi
   }
 
   // ── Focus (zone centrale) ─────────────────────────────────────────────────
-  if (mode === 'focus') {
+  if (mode === "focus") {
     return (
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
@@ -99,7 +105,9 @@ export function ClockWidget({ widget, mode, onFocus, onFullscreen, onClose }: Wi
       <p className="text-2xl font-medium uppercase tracking-widest text-zinc-500">
         {widget.title}
       </p>
-      <p className="text-[10rem] font-bold tabular-nums leading-none text-white">{time}</p>
+      <p className="text-[10rem] font-bold tabular-nums leading-none text-white">
+        {time}
+      </p>
       <p className="text-xl capitalize text-zinc-300">{date}</p>
       <p className="text-sm text-zinc-500">{data.timezone}</p>
       <button

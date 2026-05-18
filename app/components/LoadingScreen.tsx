@@ -1,0 +1,2 @@
+// Supprimé – non utilisé
+export {};

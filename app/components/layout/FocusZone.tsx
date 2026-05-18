@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
 /**
  * FocusZone – la zone centrale qui accueille le widget en mode "focus".
  * Affiche un placeholder quand rien n'est sélectionné.
  */
 
-import { useWidgetStore } from '../../store';
-import { WidgetRenderer } from '../../widgets';
-import { Card } from '../ui';
+import { useWidgetStore } from "../../store";
+import { WidgetRenderer } from "../../widgets";
+import { Card } from "../ui";
 
 export function FocusZone() {
-  const { widgets, focusedWidgetId, setFocus, setFullscreen } = useWidgetStore();
+  const { widgets, expandedWidgetId, expandWidget, collapseWidget } =
+    useWidgetStore();
 
-  const focused = focusedWidgetId
-    ? widgets.find((w) => w.id === focusedWidgetId)
+  const focused = expandedWidgetId
+    ? widgets.find((w) => w.id === expandedWidgetId)
     : null;
 
   if (!focused) {
@@ -31,11 +32,8 @@ export function FocusZone() {
     <Card className="h-full overflow-auto">
       <WidgetRenderer
         widget={focused}
-        mode="focus"
-        onClose={() => setFocus(null)}
-        onFullscreen={
-          focused.fullscreenable ? () => setFullscreen(focused.id) : undefined
-        }
+        mode="expanded"
+        onClose={() => collapseWidget()}
       />
     </Card>
   );

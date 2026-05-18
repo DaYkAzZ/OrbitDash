@@ -1,30 +1,31 @@
-'use client';
+"use client";
 
 /**
  * FullscreenOverlay – overlay plein écran affiché quand un widget
  * est en mode "fullscreen". Se ferme avec Échap ou le bouton dédié.
+ * Note: Actuellement non utilisé - les widgets utilisent le mode "expanded"
  */
 
-import { useEffect } from 'react';
-import { useWidgetStore } from '../../store';
-import { WidgetRenderer } from '../../widgets';
+import { useEffect } from "react";
+import { useWidgetStore } from "../../store";
+import { WidgetRenderer } from "../../widgets";
 
 export function FullscreenOverlay() {
-  const { widgets, fullscreenWidgetId, setFullscreen } = useWidgetStore();
+  const { widgets, expandedWidgetId, collapseWidget } = useWidgetStore();
 
-  const widget = fullscreenWidgetId
-    ? widgets.find((w) => w.id === fullscreenWidgetId)
+  const widget = expandedWidgetId
+    ? widgets.find((w) => w.id === expandedWidgetId)
     : null;
 
   // Fermeture avec la touche Échap
   useEffect(() => {
     if (!widget) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(null);
+      if (e.key === "Escape") collapseWidget();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [widget, setFullscreen]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [widget, collapseWidget]);
 
   if (!widget) return null;
 
@@ -33,13 +34,13 @@ export function FullscreenOverlay() {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
       onClick={(e) => {
         // Ferme si on clique sur le fond
-        if (e.target === e.currentTarget) setFullscreen(null);
+        if (e.target === e.currentTarget) collapseWidget();
       }}
     >
       <WidgetRenderer
         widget={widget}
-        mode="fullscreen"
-        onClose={() => setFullscreen(null)}
+        mode="expanded"
+        onClose={() => collapseWidget()}
       />
     </div>
   );

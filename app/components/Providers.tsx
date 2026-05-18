@@ -1,13 +1,4 @@
-'use client';
-
-import { ThemeProvider, AuthProvider } from '../store';
-
+"use client";
 export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <ThemeProvider>
-        {children}
-      </ThemeProvider>
-    </AuthProvider>
-  );
+  return <>{children}</>;
 }

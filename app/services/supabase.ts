@@ -1,13 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+/**
+ * SUPABASE SERVICE - Mock client pour version sans authentification
+ * En production, installer @supabase/supabase-js et activer cette configuration
+ */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '[Supabase] NEXT_PUBLIC_SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_ANON_KEY manquant.\n' +
-    'Crée un fichier .env.local avec ces deux variables.'
-  );
-}
-
-export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '');
+// Mock Supabase client - replace with real client in production
+export const supabase = {
+  auth: {
+    signUp: async () => ({ data: null, error: null }),
+    signIn: async () => ({ data: null, error: null }),
+    signOut: async () => ({ data: null, error: null }),
+    getSession: async () => ({ data: null, error: null }),
+  },
+  from: (table: string) => ({
+    select: () => ({ data: [], error: null }),
+    insert: () => ({ data: null, error: null }),
+    update: () => ({ data: null, error: null }),
+    delete: () => ({ data: null, error: null }),
+  }),
+};

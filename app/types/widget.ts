@@ -1,106 +1,52 @@
-// ─── Widget Types ────────────────────────────────────────────────────────────
-
-export type WidgetMode = "inplace" | "focus" | "fullscreen";
-
+/** Types de widgets supportés */
 export type WidgetType =
-  | "clock"
-  | "poll"
-  | "rss"
-  | "crypto"
-  | "note"
-  | "stock"
-  | "weather"
-  | "ainews";
+  | "clock" | "weather" | "stock" | "ainews"
+  | "notes" | "mood" | "music" | "activity"
+  | "crypto" | "timer" | "quote";
 
-// Data spécifiques à chaque type de widget
-export interface ClockWidgetData {
-  timezone: string;
-  showSeconds: boolean;
-  format24h: boolean;
-}
+export type WidgetPosition = "left" | "right" | "top" | "bottom" | "center";
+export type WidgetDisplayMode = "compact" | "expanded" | "fullscreen";
 
-export interface PollOption {
-  id: string;
-  label: string;
-  votes: number;
-}
-
-export interface PollWidgetData {
-  question: string;
-  options: PollOption[];
-  expiresAt?: string;
-  allowMultiple: boolean;
-}
-
-export interface RssWidgetData {
-  feedUrl: string;
-  maxItems: number;
-  title: string;
-}
-
-export interface NoteWidgetData {
-  content: string;
-  color: string;
-}
-
-// ── Bourse ───────────────────────────────────────────────────────────────────
-export interface StockWidgetData {
-  /** Symbole Finnhub, ex: "^FCHI" pour CAC40 */
-  symbol: string;
-  /** Nom affiché */
-  label: string;
-  /** Couleur d'accent hex */
-  accentColor?: string;
-}
-
-// ── Météo ─────────────────────────────────────────────────────────────────────
-export interface WeatherWidgetData {
-  /** Nom de la ville tel que l'API Open-Meteo la reconnaît */
-  city: string;
-  /** Latitude */
-  lat: number;
-  /** Longitude */
-  lon: number;
-  /** Unité de température : "celsius" | "fahrenheit" */
-  unit: "celsius" | "fahrenheit";
-}
-
-// ── Actus IA ──────────────────────────────────────────────────────────────────
-export interface AiNewsWidgetData {
-  /** Nombre max d'articles affichés en focus */
-  maxItems: number;
-  /** Mots-clés de recherche */
-  keywords: string;
-}
-
-export type WidgetData =
-  | ClockWidgetData
-  | PollWidgetData
-  | RssWidgetData
-  | NoteWidgetData
-  | StockWidgetData
-  | WeatherWidgetData
-  | AiNewsWidgetData
-  | Record<string, unknown>;
-
-// Contrat d'interface principal pour un widget
-export interface Widget {
+export interface WidgetConfig {
   id: string;
   type: WidgetType;
   title: string;
-  position: number;
-  focusable: boolean;
-  fullscreenable: boolean;
-  data: WidgetData;
-  createdAt: string;
-  updatedAt: string;
+  description: string;
+  icon: string;
+  position: WidgetPosition;
+  order: number;
+  isExpanded: boolean;
+  isFavorite: boolean;
+  isPinned: boolean;
+  displayMode: WidgetDisplayMode;
+  data: Record<string, any>;
+  metadata: { createdAt: number; updatedAt: number; lastAccessedAt: number; accessCount: number };
+  settings: { showBorder: boolean; showShadow: boolean; customColor?: string; refreshInterval?: number };
 }
 
-// Props passées à chaque widget selon son mode d'affichage
-export interface WidgetProps {
-  widget: Widget;
-  mode: WidgetMode;
-  onFocus?: () => void;
-  onFullscreen?: () => void;
-  onClose?: () => void;
+export interface WidgetStoreState {
+  widgets: WidgetConfig[];
+  expandedWidgetId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  addWidget: (type: WidgetType, position: WidgetPosition) => string;
+  removeWidget: (widgetId: string) => void;
+  expandWidget: (widgetId: string) => void;
+  collapseWidget: () => void;
+  toggleFavorite: (widgetId: string) => void;
+  updateWidgetData: (widgetId: string, data: Partial<Record<string, any>>) => void;
+  reorderWidgets: (widgets: WidgetConfig[]) => void;
+  loadWidgets: () => void;
+  saveWidgets: () => void;
+  resetWidgets: () => void;
+  getWidget: (widgetId: string) => WidgetConfig | undefined;
+}
+
+export interface WidgetCatalogItem {
+  type: WidgetType;
+  title: string;
+  description: string;
+  icon: string;
+  category: "temps" | "finance" | "info" | "productivité" | "divertissement";
+  color: string;
 }
