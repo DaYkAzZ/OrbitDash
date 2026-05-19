@@ -1,59 +1,62 @@
-'use client';
+"use client";
 
-/**
- * ThemeContext – gère le mode clair/sombre et la densité d'affichage.
- * Persiste le choix dans localStorage.
- */
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { Theme, ThemeMode, ThemeDensity } from '../types';
+export type ThemeMode = "light" | "dark";
+export type ThemeDensity = "compact" | "spaced";
+
+export interface Theme {
+  mode: ThemeMode;
+  density: ThemeDensity;
+}
 
 interface ThemeContextValue extends Theme {
-  setMode: (mode: ThemeMode) => void;
-  setDensity: (density: ThemeDensity) => void;
   toggleMode: () => void;
+  setMode: (m: ThemeMode) => void;
+  setDensity: (d: ThemeDensity) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') return 'dark';
-    const saved = localStorage.getItem('orbitdash-theme');
-    if (!saved) return 'dark';
-    try {
-      const parsed = JSON.parse(saved) as Theme;
-      return parsed.mode ?? 'dark';
-    } catch {
-      return 'dark';
-    }
-  });
-  const [density, setDensityState] = useState<ThemeDensity>(() => {
-    if (typeof window === 'undefined') return 'spaced';
-    const saved = localStorage.getItem('orbitdash-theme');
-    if (!saved) return 'spaced';
-    try {
-      const parsed = JSON.parse(saved) as Theme;
-      return parsed.density ?? 'spaced';
-    } catch {
-      return 'spaced';
-    }
-  });
+  const [mode, setModeState] = useState<ThemeMode>("light");
+  const [density, setDensityState] = useState<ThemeDensity>("spaced");
 
-  // Applique les classes sur <html>
+  // Charge depuis localStorage côté client uniquement
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("orbitdash-theme");
+      if (saved) {
+        const { mode: m, density: d } = JSON.parse(saved);
+        if (m) setModeState(m);
+        if (d) setDensityState(d);
+      }
+    } catch {}
+  }, []);
+
+  // Applique les classes CSS
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('dark', mode === 'dark');
+    if (mode === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
     root.dataset.density = density;
-    localStorage.setItem('orbitdash-theme', JSON.stringify({ mode, density }));
+    try {
+      localStorage.setItem("orbitdash-theme", JSON.stringify({ mode, density }));
+    } catch {}
   }, [mode, density]);
 
-  const setMode = (m: ThemeMode) => setModeState(m);
-  const setDensity = (d: ThemeDensity) => setDensityState(d);
-  const toggleMode = () => setModeState((m) => (m === 'dark' ? 'light' : 'dark'));
-
   return (
-    <ThemeContext.Provider value={{ mode, density, setMode, setDensity, toggleMode }}>
+    <ThemeContext.Provider
+      value={{
+        mode, density,
+        toggleMode: () => setModeState((m) => (m === "light" ? "dark" : "light")),
+        setMode: setModeState,
+        setDensity: setDensityState,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
@@ -61,6 +64,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error('useTheme must be used inside <ThemeProvider>');
+  if (!ctx) throw new Error("useTheme must be inside <ThemeProvider>");
   return ctx;
 }

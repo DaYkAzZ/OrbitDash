@@ -219,7 +219,7 @@ export function StockWidget({
   }
 
   // ── Focus ─────────────────────────────────────────────────────────────────
-  if (mode === "focus") {
+  if (mode === "expanded") {
     return (
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
@@ -230,7 +230,7 @@ export function StockWidget({
             <p className="text-xs text-zinc-500">{data.symbol}</p>
           </div>
           <div className="flex gap-2">
-            {widget.fullscreenable && (
+            {onFullscreen && (
               <button
                 onClick={onFullscreen}
                 className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground"

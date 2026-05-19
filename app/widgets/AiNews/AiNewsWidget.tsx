@@ -132,13 +132,13 @@ export function AiNewsWidget({
   }
 
   // ── Focus ─────────────────────────────────────────────────────────────────
-  if (mode === "focus") {
+  if (mode === "expanded") {
     return (
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">🤖 Actus IA</h2>
           <div className="flex gap-2">
-            {widget.fullscreenable && (
+            {onFullscreen && (
               <button
                 onClick={onFullscreen}
                 className="rounded-lg p-1.5 text-zinc-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground"

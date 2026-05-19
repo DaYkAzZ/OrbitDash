@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import type { WidgetConfig } from "@/app/types";
 import { useWidgetStore } from "@/app/store/useWidgetStore";
 
-export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig; onClose: () => void }) {
+export function TimerWidgetExpanded({
+  widget,
+  onClose,
+}: {
+  widget: WidgetConfig;
+  onClose: () => void;
+}) {
   const { updateWidgetData } = useWidgetStore();
   const [seconds, setSeconds] = useState(widget.data.secondsLeft ?? 25 * 60);
   const [running, setRunning] = useState(false);
@@ -13,7 +19,7 @@ export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig;
   useEffect(() => {
     if (running) {
       ref.current = setInterval(() => {
-        setSeconds((s) => {
+        setSeconds((s: number) => {
           if (s <= 1) {
             clearInterval(ref.current!);
             setRunning(false);
@@ -30,11 +36,17 @@ export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig;
 
   const reset = () => {
     setRunning(false);
-    const s = mode === "work" ? (widget.data.workMinutes ?? 25) * 60 : (widget.data.breakMinutes ?? 5) * 60;
+    const s =
+      mode === "work"
+        ? (widget.data.workMinutes ?? 25) * 60
+        : (widget.data.breakMinutes ?? 5) * 60;
     setSeconds(s);
   };
 
-  const total = mode === "work" ? (widget.data.workMinutes ?? 25) * 60 : (widget.data.breakMinutes ?? 5) * 60;
+  const total =
+    mode === "work"
+      ? (widget.data.workMinutes ?? 25) * 60
+      : (widget.data.breakMinutes ?? 5) * 60;
   const pct = Math.round(((total - seconds) / total) * 100);
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -46,8 +58,14 @@ export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig;
       {/* Mode tabs */}
       <div className="flex gap-2 p-1 rounded-xl bg-[var(--bg-hover)]">
         {(["work", "break"] as const).map((m) => (
-          <button key={m} onClick={() => { setMode(m); reset(); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? "bg-[var(--bg-card)] text-[var(--text-1)] shadow-sm" : "text-[var(--text-3)]"}`}>
+          <button
+            key={m}
+            onClick={() => {
+              setMode(m);
+              reset();
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? "bg-[var(--bg-card)] text-[var(--text-1)] shadow-sm" : "text-[var(--text-3)]"}`}
+          >
             {m === "work" ? "🎯 Travail" : "☕ Pause"}
           </button>
         ))}
@@ -56,8 +74,21 @@ export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig;
       {/* Timer circulaire */}
       <div className="relative flex items-center justify-center">
         <svg width="140" height="140" className="-rotate-90">
-          <circle cx="70" cy="70" r="54" fill="none" stroke="var(--border)" strokeWidth="8" />
-          <circle cx="70" cy="70" r="54" fill="none" stroke="var(--accent)" strokeWidth="8"
+          <circle
+            cx="70"
+            cy="70"
+            r="54"
+            fill="none"
+            stroke="var(--border)"
+            strokeWidth="8"
+          />
+          <circle
+            cx="70"
+            cy="70"
+            r="54"
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference - (circumference * pct) / 100}
@@ -68,17 +99,34 @@ export function TimerWidgetExpanded({ widget, onClose }: { widget: WidgetConfig;
           <p className="text-4xl font-bold tabular-nums text-[var(--text-1)]">
             {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
           </p>
-          <p className="text-xs text-[var(--text-3)] mt-1">Session {widget.data.session ?? 1}/{widget.data.totalSessions ?? 4}</p>
+          <p className="text-xs text-[var(--text-3)] mt-1">
+            Session {widget.data.session ?? 1}/{widget.data.totalSessions ?? 4}
+          </p>
         </div>
       </div>
 
       {/* Contrôles */}
       <div className="flex gap-3">
-        <button onClick={reset} className="btn-icon w-11 h-11 rounded-xl border border-[var(--border)]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <button
+          onClick={reset}
+          className="btn-icon w-11 h-11 rounded-xl border border-[var(--border)]"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
         </button>
-        <button onClick={() => setRunning((r) => !r)}
-          className="h-11 px-8 rounded-xl bg-[var(--accent)] text-white font-semibold hover:bg-[var(--accent-hover)] transition-colors shadow-sm">
+        <button
+          onClick={() => setRunning((r) => !r)}
+          className="h-11 px-8 rounded-xl bg-[var(--accent)] text-white font-semibold hover:bg-[var(--accent-hover)] transition-colors shadow-sm"
+        >
           {running ? "⏸ Pause" : "▶ Démarrer"}
         </button>
       </div>

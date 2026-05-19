@@ -1,12 +1,13 @@
 "use client";
 
 import { useWidgetStore } from "@/app/store/useWidgetStore";
+import { useDragDrop } from "@/app/hooks/useDragDrop";
 import type { WidgetConfig } from "@/app/types";
 import { useEffect, useState } from "react";
 
 interface Props { widget: WidgetConfig }
 
-/** Rendu compact du contenu selon le type */
+/* ── Contenu compact (inchangé) ─────────────────────────────────────────────── */
 function CompactContent({ widget }: { widget: WidgetConfig }) {
   const [time, setTime] = useState("");
 
@@ -138,14 +139,10 @@ function CompactContent({ widget }: { widget: WidgetConfig }) {
           <p className="text-sm font-semibold text-[var(--text-1)] truncate">{t?.title ?? "—"}</p>
           <p className="text-xs text-[var(--text-3)] truncate">{t?.artist ?? "—"}</p>
           <div className="mt-2 h-1 rounded-full bg-[var(--bg-hover)] overflow-hidden">
-            <div
-              className="h-full bg-[var(--accent)] rounded-full"
-              style={{ width: t ? `${Math.round((t.progress / t.duration) * 100)}%` : "0%" }}
-            />
+            <div className="h-full bg-[var(--accent)] rounded-full"
+              style={{ width: t ? `${Math.round((t.progress / t.duration) * 100)}%` : "0%" }} />
           </div>
-          <p className="text-[10px] text-[var(--text-3)] mt-1">
-            {widget.data.isPlaying ? "▶ En cours" : "⏸ En pause"}
-          </p>
+          <p className="text-[10px] text-[var(--text-3)] mt-1">{widget.data.isPlaying ? "▶ En cours" : "⏸ En pause"}</p>
         </div>
       );
     }
@@ -177,21 +174,43 @@ function CompactContent({ widget }: { widget: WidgetConfig }) {
   }
 }
 
+/* ── CompactWidget avec drag & drop ─────────────────────────────────────────── */
 export function CompactWidget({ widget }: Props) {
   const { expandWidget, removeWidget, toggleFavorite } = useWidgetStore();
+  const { onDragStart, onDragEnd, onDragOver, onDrop } = useDragDrop();
+  const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div
-      className="widget-card group p-4"
+      draggable
+      onDragStart={onDragStart(widget.id)}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => { onDragOver(e); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => { onDrop(widget.id, widget.position)(e); setIsDragOver(false); }}
+      className={`widget-card group p-4 select-none transition-all ${
+        isDragOver ? "border-[var(--accent)] bg-[var(--accent-light)] scale-[1.02]" : ""
+      }`}
       onClick={() => expandWidget(widget.id)}
     >
+      {/* Handle drag visuel */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+        <svg width="20" height="8" viewBox="0 0 20 8" fill="none">
+          <circle cx="4" cy="2" r="1.5" fill="var(--text-3)"/>
+          <circle cx="10" cy="2" r="1.5" fill="var(--text-3)"/>
+          <circle cx="16" cy="2" r="1.5" fill="var(--text-3)"/>
+          <circle cx="4" cy="6" r="1.5" fill="var(--text-3)"/>
+          <circle cx="10" cy="6" r="1.5" fill="var(--text-3)"/>
+          <circle cx="16" cy="6" r="1.5" fill="var(--text-3)"/>
+        </svg>
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-base flex-none">{widget.icon}</span>
           <p className="text-xs font-semibold text-[var(--text-2)] truncate">{widget.title}</p>
         </div>
-        {/* Actions apparaissent au hover */}
         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-none ml-2">
           <button
             onClick={(e) => { e.stopPropagation(); toggleFavorite(widget.id); }}

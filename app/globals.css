@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens – Light Mode Premium ─────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   LIGHT MODE (défaut)
+   ════════════════════════════════════════════════════════════ */
 :root {
   --bg:           #f8f9fc;
   --bg-card:      #ffffff;
   --bg-hover:     #f1f3f9;
   --bg-active:    #e8ecf5;
   --border:       #e2e6f0;
-  --border-focus: #6366f1;
   --text-1:       #0f1117;
   --text-2:       #4b5468;
   --text-3:       #9ba3b8;
@@ -25,66 +26,88 @@
   --shadow-md:    0 4px 20px rgba(15,17,23,0.10);
   --shadow-lg:    0 12px 40px rgba(15,17,23,0.14);
   --shadow-xl:    0 24px 64px rgba(15,17,23,0.18);
-  --radius-sm:    8px;
-  --radius-md:    12px;
-  --radius-lg:    18px;
-  --radius-xl:    24px;
 }
 
-/* ─── Thème Tailwind ─────────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   DARK MODE (classe .dark sur <html>)
+   ════════════════════════════════════════════════════════════ */
+html.dark {
+  --bg:           #09090b;
+  --bg-card:      #18181b;
+  --bg-hover:     #27272a;
+  --bg-active:    #3f3f46;
+  --border:       #3f3f46;
+  --text-1:       #fafafa;
+  --text-2:       #a1a1aa;
+  --text-3:       #52525b;
+  --accent:       #818cf8;
+  --accent-light: #1e1b4b;
+  --accent-hover: #6366f1;
+  --green:        #4ade80;
+  --green-light:  #052e16;
+  --red:          #f87171;
+  --red-light:    #450a0a;
+  --orange:       #fb923c;
+  --orange-light: #431407;
+  --shadow-xs:    0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md:    0 4px 20px rgba(0,0,0,0.5);
+  --shadow-lg:    0 12px 40px rgba(0,0,0,0.6);
+  --shadow-xl:    0 24px 64px rgba(0,0,0,0.7);
+}
+
+/* ════════════════════════════════════════════════════════════
+   DENSITÉ (data-density sur <html>)
+   ════════════════════════════════════════════════════════════ */
+html[data-density="compact"] .widget-card { padding: 12px; }
+html[data-density="compact"] aside        { gap: 8px !important; padding: 8px !important; }
+html[data-density="spaced"]  .widget-card { padding: 16px; }
+
+/* ════════════════════════════════════════════════════════════
+   THÈME TAILWIND
+   ════════════════════════════════════════════════════════════ */
 @theme inline {
-  --color-bg:         var(--bg);
-  --color-card:       var(--bg-card);
-  --color-border:     var(--border);
-  --color-accent:     var(--accent);
-  --color-text-1:     var(--text-1);
-  --color-text-2:     var(--text-2);
-  --color-text-3:     var(--text-3);
-  --font-sans:        var(--font-geist-sans);
-  --font-mono:        var(--font-geist-mono);
+  --color-bg:      var(--bg);
+  --color-card:    var(--bg-card);
+  --color-border:  var(--border);
+  --color-accent:  var(--accent);
+  --color-text-1:  var(--text-1);
+  --color-text-2:  var(--text-2);
+  --color-text-3:  var(--text-3);
+  --font-sans:     var(--font-geist-sans);
+  --font-mono:     var(--font-geist-mono);
 }
 
-/* ─── Reset & Base ───────────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   BASE
+   ════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; }
-
-html, body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
+html, body { height: 100%; width: 100%; overflow: hidden; }
 body {
   background: var(--bg);
   color: var(--text-1);
   font-family: var(--font-geist-sans), -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color .2s ease, color .2s ease;
 }
 
-/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+/* ════════════════════════════════════════════════════════════
+   COMPOSANTS GÉNÉRIQUES
+   ════════════════════════════════════════════════════════════ */
 
-/* ─── Focus ──────────────────────────────────────────────────────────────── */
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* -- Card -- */
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
 
-/* ─── Animations ─────────────────────────────────────────────────────────── */
-@keyframes fadeIn   { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-@keyframes scaleIn  { from { opacity:0; transform:scale(.94); } to { opacity:1; transform:scale(1); } }
-@keyframes slideUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-@keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:.5;} }
-@keyframes spinSlow { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-
-.anim-fade  { animation: fadeIn  .25s ease both; }
-.anim-scale { animation: scaleIn .2s ease both; }
-.anim-slide { animation: slideUp .3s ease both; }
-
-/* ─── Widget card ─────────────────────────────────────────────────────────── */
+/* -- Widget card -- */
 .widget-card {
   background: var(--bg-card);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
   box-shadow: var(--shadow-sm);
   transition: border-color .15s, box-shadow .15s, transform .15s;
   cursor: pointer;
@@ -96,12 +119,20 @@ body {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
+html.dark .widget-card:hover { border-color: #52525b; }
 .widget-card.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(99,102,241,.15), var(--shadow-md);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent), var(--shadow-md);
 }
 
-/* ─── Badge ──────────────────────────────────────────────────────────────── */
+/* -- Stat card -- */
+.stat-card {
+  background: var(--bg-hover);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+/* -- Badge -- */
 .badge {
   display: inline-flex; align-items: center;
   padding: 2px 8px; border-radius: 99px;
@@ -112,25 +143,84 @@ body {
 .badge-accent { background: var(--accent-light); color: var(--accent); }
 .badge-orange { background: var(--orange-light); color: var(--orange); }
 
-/* ─── Stat card ──────────────────────────────────────────────────────────── */
-.stat-card {
-  background: var(--bg-hover);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-}
-
-/* ─── Btn icon ───────────────────────────────────────────────────────────── */
+/* -- Bouton icône -- */
 .btn-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
-  border-radius: var(--radius-sm);
+  width: 32px; height: 32px; border-radius: 8px;
   color: var(--text-3);
   transition: background .12s, color .12s;
+  border: none; background: transparent; cursor: pointer;
 }
 .btn-icon:hover { background: var(--bg-active); color: var(--text-2); }
 
-/* ─── Gradient spot (déco fond) ──────────────────────────────────────────── */
+/* -- Input -- */
+.input-base {
+  height: 36px; width: 100%;
+  padding: 0 12px; border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-1); font-size: 14px;
+  transition: border-color .15s;
+  outline: none;
+}
+.input-base:focus { border-color: var(--accent); }
+.input-base::placeholder { color: var(--text-3); }
+
+/* -- Textarea -- */
+.textarea-base {
+  width: 100%; padding: 12px;
+  border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--bg-hover); color: var(--text-1);
+  font-size: 14px; resize: vertical; outline: none;
+  transition: border-color .15s; line-height: 1.6;
+}
+.textarea-base:focus { border-color: var(--accent); }
+
+/* -- Bouton principal -- */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 16px; height: 36px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  transition: background .15s, box-shadow .15s;
+}
+.btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-sm); }
+
+/* -- Bouton secondaire -- */
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 14px; height: 36px; border-radius: 8px;
+  background: var(--bg-hover); color: var(--text-2);
+  font-size: 13px; font-weight: 500; border: 1.5px solid var(--border); cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn-secondary:hover { background: var(--bg-active); border-color: var(--text-3); }
+
+/* ════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ════════════════════════════════════════════════════════════ */
+@keyframes fadeIn   { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:none } }
+@keyframes scaleIn  { from { opacity:0; transform:scale(.94)      } to { opacity:1; transform:scale(1) } }
+@keyframes slideUp  { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
+
+.anim-fade  { animation: fadeIn  .25s ease both; }
+.anim-scale { animation: scaleIn .2s  ease both; }
+.anim-slide { animation: slideUp .3s  ease both; }
+
+/* ════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ════════════════════════════════════════════════════════════
+   DÉCO
+   ════════════════════════════════════════════════════════════ */
 .spot {
   position: absolute; border-radius: 50%;
   filter: blur(80px); pointer-events: none; z-index: 0;
 }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
