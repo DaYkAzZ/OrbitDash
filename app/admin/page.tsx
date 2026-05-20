@@ -1,212 +1,457 @@
 "use client";
 
-/**
- * Admin Page - Gestion des widgets
- * Pas d'authentification requise dans cette version
- */
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Plus, Trash2, RotateCcw, ArrowLeft } from "lucide-react";
-import { useWidgetStore } from "../store";
-import type { WidgetType } from "@/app/types";
+import { useWidgetStore, WIDGET_CATALOG, createDefaultWidget } from "@/app/store/useWidgetStore";
+import { useAuth } from "@/app/store/AuthContext";
+import type { WidgetType, WidgetPosition } from "@/app/types";
 
-const WIDGET_TYPES: { type: WidgetType; name: string; description: string }[] =
-  [
-    {
-      type: "clock",
-      name: "Horloge",
-      description: "Affiche l'heure en temps réel",
-    },
-    {
-      type: "weather",
-      name: "Météo",
-      description: "Conditions météorologiques",
-    },
-    {
-      type: "stock",
-      name: "Bourse",
-      description: "Indices boursiers et crypto",
-    },
-    { type: "mood", name: "Humeur", description: "Humeur et émotions" },
-    { type: "notes", name: "Notes", description: "Prise de notes rapide" },
-    { type: "music", name: "Musique", description: "Lecteur de musique" },
-    { type: "activity", name: "Activité", description: "Suivi des tâches" },
-    {
-      type: "ainews",
-      name: "Actualités IA",
-      description: "Dernières actualités",
-    },
-  ];
+const POSITIONS: { label: string; value: WidgetPosition }[] = [
+  { label: "Gauche", value: "left" },
+  { label: "Droite", value: "right" },
+  { label: "Haut", value: "top" },
+  { label: "Bas", value: "bottom" },
+];
 
-const POSITIONS = ["top", "left", "right", "bottom", "center"] as const;
+/* ── Éditeur de données d'un widget ──────────────────────────────────────────── */
+function WidgetDataEditor({ widgetId, onClose }: { widgetId: string; onClose: () => void }) {
+  const { widgets, updateWidgetData } = useWidgetStore();
+  const widget = widgets.find((w) => w.id === widgetId);
+  if (!widget) return null;
 
-export default function AdminPage() {
-  const { widgets, removeWidget, resetWidgets } = useWidgetStore();
-  const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
-  const [selectedPosition, setSelectedPosition] = useState<
-    "left" | "right" | "top" | "bottom" | "center"
-  >("left");
+  const [data, setData] = useState(JSON.stringify(widget.data, null, 2));
+  const [err, setErr] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
-  const handleAddWidget = () => {
-    if (selectedType) {
-      // Mock implementation - would be replaced with actual store method
-      console.log(`Adding ${selectedType} widget at ${selectedPosition}`);
-      setSelectedType(null);
+  const handleSave = () => {
+    setErr(null);
+    try {
+      const parsed = JSON.parse(data);
+      updateWidgetData(widgetId, parsed);
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 700);
+    } catch (e: any) {
+      setErr("JSON invalide : " + e.message);
+    }
+  };
+
+  // Éditeurs spécialisés par type
+  const renderSpecialized = () => {
+    switch (widget.type) {
+      case "notes":
+        return (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-[var(--text-2)]">Contenu de la note</label>
+            <textarea
+              className="textarea-base"
+              rows={6}
+              value={widget.data.content ?? ""}
+              onChange={(e) => updateWidgetData(widgetId, { content: e.target.value })}
+            />
+          </div>
+        );
+
+      case "weather":
+        return (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[var(--text-2)]">Ville</label>
+              <input className="input-base" value={widget.data.city ?? ""} onChange={(e) => updateWidgetData(widgetId, { city: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[var(--text-2)]">Température (°C)</label>
+                <input type="number" className="input-base" value={widget.data.temperature ?? 0} onChange={(e) => updateWidgetData(widgetId, { temperature: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[var(--text-2)]">Condition</label>
+                <input className="input-base" value={widget.data.condition ?? ""} onChange={(e) => updateWidgetData(widgetId, { condition: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[var(--text-2)]">Humidité (%)</label>
+                <input type="number" className="input-base" value={widget.data.humidity ?? 0} onChange={(e) => updateWidgetData(widgetId, { humidity: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[var(--text-2)]">Vent (km/h)</label>
+                <input type="number" className="input-base" value={widget.data.windSpeed ?? 0} onChange={(e) => updateWidgetData(widgetId, { windSpeed: Number(e.target.value) })} />
+              </div>
+            </div>
+          </div>
+        );
+
+      case "ainews":
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--text-3)]">Modifier les articles (JSON brut)</p>
+            <textarea
+              className="textarea-base font-mono text-xs"
+              rows={8}
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+            />
+            {err && <p className="text-xs text-[var(--red)]">{err}</p>}
+            <button onClick={handleSave} className="btn-primary">
+              {saved ? "✓ Sauvegardé" : "Appliquer"}
+            </button>
+          </div>
+        );
+
+      case "mood":
+        return (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[var(--text-2)]">Humeur actuelle</label>
+              <select
+                className="input-base"
+                value={widget.data.current ?? "happy"}
+                onChange={(e) => {
+                  const moods: Record<string, string> = { happy: "😊", focused: "🎯", energetic: "⚡", calm: "😌", stressed: "😰" };
+                  updateWidgetData(widgetId, { current: e.target.value, emoji: moods[e.target.value] ?? "😊" });
+                }}
+              >
+                {["happy", "focused", "energetic", "calm", "stressed"].map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[var(--text-2)]">Intensité (1–10)</label>
+              <input type="range" min={1} max={10} value={widget.data.intensity ?? 5}
+                onChange={(e) => updateWidgetData(widgetId, { intensity: Number(e.target.value) })}
+                className="w-full"
+              />
+              <p className="text-xs text-[var(--text-3)]">{widget.data.intensity ?? 5}/10</p>
+            </div>
+          </div>
+        );
+
+      case "quote":
+        return (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[var(--text-2)]">Citation</label>
+              <textarea className="textarea-base" rows={3} value={widget.data.text ?? ""}
+                onChange={(e) => updateWidgetData(widgetId, { text: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-[var(--text-2)]">Auteur</label>
+              <input className="input-base" value={widget.data.author ?? ""}
+                onChange={(e) => updateWidgetData(widgetId, { author: e.target.value })} />
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-[var(--text-2)]">Données (JSON)</label>
+            <textarea className="textarea-base font-mono text-xs" rows={8} value={data}
+              onChange={(e) => setData(e.target.value)} />
+            {err && <p className="text-xs text-[var(--red)]">{err}</p>}
+            <button onClick={handleSave} className="btn-primary">
+              {saved ? "✓ Sauvegardé" : "Appliquer le JSON"}
+            </button>
+          </div>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-950 p-8">
-      {/* Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="max-w-6xl mx-auto mb-8"
-      >
-        <Link href="/">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Retour au dashboard
-          </motion.button>
-        </Link>
-        <h1 className="text-4xl font-bold text-white mb-2">Administration</h1>
-        <p className="text-zinc-400">Gérez vos widgets et votre dashboard</p>
-      </motion.div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-xl)] overflow-hidden anim-scale"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">{widget.icon}</span>
+            <div>
+              <p className="font-semibold text-[var(--text-1)]">Modifier — {widget.title}</p>
+              <p className="text-xs text-[var(--text-3)]">Les changements sont appliqués immédiatement</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="btn-icon">✕</button>
+        </div>
+        <div className="p-5">{renderSpecialized()}</div>
+      </div>
+    </div>
+  );
+}
 
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Actions */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="flex gap-3"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => resetWidgets()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Réinitialiser les widgets
-          </motion.button>
-        </motion.div>
+/* ── Page Admin ───────────────────────────────────────────────────────────── */
+export default function AdminPage() {
+  const router = useRouter();
+  const { user, isAdmin, isAuthenticated, logout } = useAuth();
+  const { widgets, removeWidget, resetWidgets, addWidget, reorderWidgets } = useWidgetStore();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
+  const [selectedPos, setSelectedPos] = useState<WidgetPosition>("left");
+  const [addedMsg, setAddedMsg] = useState(false);
+  const [filterType, setFilterType] = useState<string>("tous");
+  const [confirmReset, setConfirmReset] = useState(false);
 
-        {/* Add widget section */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="p-6 bg-zinc-900/50 border border-zinc-700/50 rounded-lg space-y-4"
-        >
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Ajouter un widget
-          </h2>
+  // Redirige les non-admins
+  useEffect(() => {
+    if (!isAuthenticated) { router.replace("/login"); return; }
+    if (!isAdmin) { router.replace("/"); }
+  }, [isAuthenticated, isAdmin, router]);
 
-          <div className="grid grid-cols-4 gap-3">
-            {WIDGET_TYPES.map((widget) => (
-              <motion.button
-                key={widget.type}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedType(widget.type)}
-                className={`p-3 rounded-lg border transition-all ${
-                  selectedType === widget.type
-                    ? "border-purple-500 bg-purple-500/20"
-                    : "border-zinc-700/50 bg-zinc-800/50 hover:border-zinc-600"
+  if (!isAdmin) return null;
+
+  const handleAddWidget = () => {
+    if (!selectedType) return;
+    addWidget(selectedType, selectedPos);
+    setAddedMsg(true);
+    setSelectedType(null);
+    setTimeout(() => setAddedMsg(false), 2000);
+  };
+
+  const handleLogout = () => { logout(); router.replace("/login"); };
+
+  const filteredWidgets = filterType === "tous" ? widgets : widgets.filter((w) => w.type === filterType);
+  const uniqueTypes = ["tous", ...Array.from(new Set(widgets.map((w) => w.type)))];
+
+  return (
+    <div className="min-h-screen bg-[var(--bg)] flex flex-col">
+      {/* Header admin */}
+      <header className="flex-none h-14 px-5 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-xs)]">
+        <div className="flex items-center gap-3">
+          <Link href="/">
+            <button className="btn-icon" title="Retour au dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+            </button>
+          </Link>
+          <div className="h-5 w-px bg-[var(--border)]" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+              <span className="text-white font-bold text-xs">O</span>
+            </div>
+            <span className="font-semibold text-[var(--text-1)]">Administration</span>
+            <span className="badge badge-accent">Admin</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm text-[var(--text-2)]">{user?.displayName}</span>
+          <button onClick={handleLogout} className="btn-secondary text-xs px-3 py-1.5 h-auto">
+            Déconnexion
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full space-y-6">
+
+        {/* Stats rapides */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Widgets actifs", value: widgets.length, icon: "📊" },
+            { label: "Favoris", value: widgets.filter((w) => w.isFavorite).length, icon: "⭐" },
+            { label: "Gauche", value: widgets.filter((w) => w.position === "left").length, icon: "◀" },
+            { label: "Droite", value: widgets.filter((w) => w.position === "right").length, icon: "▶" },
+          ].map((s) => (
+            <div key={s.label} className="stat-card flex items-center gap-3">
+              <span className="text-2xl">{s.icon}</span>
+              <div>
+                <p className="text-2xl font-bold text-[var(--text-1)]">{s.value}</p>
+                <p className="text-xs text-[var(--text-3)]">{s.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Ajouter un widget ── */}
+        <section className="card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-[var(--text-1)]">Ajouter un widget</h2>
+            {addedMsg && <span className="text-sm text-[var(--green)] font-medium">✓ Widget ajouté !</span>}
+          </div>
+
+          {/* Catalogue */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {WIDGET_CATALOG.map((item) => (
+              <button
+                key={item.type}
+                onClick={() => setSelectedType(item.type as WidgetType)}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  selectedType === item.type
+                    ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                    : "border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)]/30 hover:shadow-[var(--shadow-sm)]"
                 }`}
               >
-                <p className="font-semibold text-white text-sm">
-                  {widget.name}
-                </p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  {widget.description}
-                </p>
-              </motion.button>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{item.icon}</span>
+                  <p className="text-xs font-semibold text-[var(--text-1)] truncate">{item.title}</p>
+                </div>
+                <p className="text-[10px] text-[var(--text-3)] line-clamp-2">{item.description}</p>
+              </button>
             ))}
           </div>
 
-          {selectedType && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex gap-3 p-3 bg-zinc-800/50 rounded-lg items-center"
-            >
-              <label className="text-sm text-zinc-300">Position:</label>
-              <select
-                value={selectedPosition}
-                onChange={(e) => setSelectedPosition(e.target.value as any)}
-                className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded text-white text-sm"
-              >
-                {POSITIONS.map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                  </option>
-                ))}
-              </select>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAddWidget}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/20"
-              >
-                Ajouter
-              </motion.button>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Widgets list */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-3"
-        >
-          <h2 className="text-lg font-bold text-white">
-            Widgets actifs ({widgets.length})
-          </h2>
-          <div className="space-y-2">
-            {widgets.length === 0 ? (
-              <p className="text-zinc-500 text-sm py-4">
-                Aucun widget actuellement. Créez-en un pour commencer.
-              </p>
-            ) : (
-              widgets.map((widget) => (
-                <motion.div
-                  key={widget.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="p-4 bg-zinc-900/50 border border-zinc-700/50 rounded-lg flex items-center justify-between hover:border-zinc-600 transition-all"
+          {/* Position + bouton */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[var(--border)]">
+            <span className="text-xs font-medium text-[var(--text-2)]">Position :</span>
+            <div className="flex gap-2">
+              {POSITIONS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setSelectedPos(p.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    selectedPos === p.value
+                      ? "bg-[var(--accent)] text-white"
+                      : "bg-[var(--bg-hover)] text-[var(--text-2)] hover:bg-[var(--bg-active)]"
+                  }`}
                 >
-                  <div className="flex-1">
-                    <p className="font-semibold text-white">{widget.title}</p>
-                    <p className="text-xs text-zinc-500">
-                      ID: {widget.id} • Position: {widget.position}
-                    </p>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => removeWidget(widget.id)}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded transition-all"
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1" />
+            <button
+              onClick={handleAddWidget}
+              disabled={!selectedType}
+              className={`btn-primary ${!selectedType ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              + Ajouter au dashboard
+            </button>
+          </div>
+        </section>
+
+        {/* ── Liste des widgets actifs ── */}
+        <section className="card p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="font-semibold text-[var(--text-1)]">
+              Widgets actifs
+              <span className="ml-2 text-xs text-[var(--text-3)] font-normal">({filteredWidgets.length}/{widgets.length})</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              {/* Filtre par type */}
+              <div className="flex gap-1.5 overflow-x-auto">
+                {uniqueTypes.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setFilterType(t)}
+                    className={`flex-none px-2.5 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
+                      filterType === t
+                        ? "bg-[var(--accent)] text-white"
+                        : "bg-[var(--bg-hover)] text-[var(--text-2)] hover:bg-[var(--bg-active)]"
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </motion.button>
-                </motion.div>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {/* Reset */}
+              {confirmReset ? (
+                <div className="flex gap-1">
+                  <button onClick={() => { resetWidgets(); setConfirmReset(false); }}
+                    className="px-3 py-1 text-xs rounded-lg bg-[var(--red)] text-white font-medium">
+                    Confirmer
+                  </button>
+                  <button onClick={() => setConfirmReset(false)} className="px-3 py-1 text-xs rounded-lg bg-[var(--bg-hover)] text-[var(--text-2)]">
+                    Annuler
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmReset(true)}
+                  className="px-3 py-1 text-xs rounded-lg bg-[var(--red-light)] text-[var(--red)] font-medium hover:bg-[var(--red)] hover:text-white transition-colors">
+                  Réinitialiser
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {filteredWidgets.length === 0 ? (
+              <p className="text-sm text-[var(--text-3)] py-4 text-center">Aucun widget. Ajoutez-en un ci-dessus.</p>
+            ) : (
+              filteredWidgets.map((widget) => (
+                <div
+                  key={widget.id}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)]/20 transition-all group"
+                >
+                  <span className="text-xl flex-none">{widget.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-[var(--text-1)] truncate">{widget.title}</p>
+                      <span className="badge badge-accent text-[10px] capitalize">{widget.position}</span>
+                      {widget.isFavorite && <span className="text-xs">⭐</span>}
+                    </div>
+                    <p className="text-xs text-[var(--text-3)] truncate font-mono">{widget.id}</p>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Changer position rapide */}
+                    <select
+                      className="text-xs border border-[var(--border)] rounded-lg px-2 py-1 bg-[var(--bg-hover)] text-[var(--text-2)] cursor-pointer"
+                      value={widget.position}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const updated = widgets.map((w) =>
+                          w.id === widget.id ? { ...w, position: e.target.value as WidgetPosition } : w
+                        );
+                        reorderWidgets(updated);
+                      }}
+                    >
+                      {POSITIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                    </select>
+                    {/* Modifier les données */}
+                    <button
+                      onClick={() => setEditingId(widget.id)}
+                      className="btn-icon"
+                      title="Modifier les données"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    {/* Supprimer */}
+                    <button
+                      onClick={() => removeWidget(widget.id)}
+                      className="btn-icon hover:!bg-[var(--red-light)] hover:!text-[var(--red)]"
+                      title="Supprimer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               ))
             )}
           </div>
-        </motion.div>
+        </section>
+
+        {/* ── Infos système ── */}
+        <section className="card p-5 space-y-3">
+          <h2 className="font-semibold text-[var(--text-1)]">Informations système</h2>
+          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-2)]">
+            <div className="stat-card">
+              <p className="text-[var(--text-3)] mb-1">Utilisateur connecté</p>
+              <p className="font-medium text-[var(--text-1)]">{user?.email}</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-[var(--text-3)] mb-1">Rôle</p>
+              <p className="font-medium text-[var(--text-1)] capitalize">{user?.role}</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-[var(--text-3)] mb-1">Persistance</p>
+              <p className="font-medium text-[var(--text-1)]">localStorage (orbitdash-v2)</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-[var(--text-3)] mb-1">Framework</p>
+              <p className="font-medium text-[var(--text-1)]">Next.js 16 + Zustand</p>
+            </div>
+          </div>
+        </section>
       </div>
+
+      {/* Modal éditeur de widget */}
+      {editingId && (
+        <WidgetDataEditor widgetId={editingId} onClose={() => setEditingId(null)} />
+      )}
     </div>
   );
 }

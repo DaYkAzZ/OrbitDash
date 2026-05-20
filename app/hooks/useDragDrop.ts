@@ -1,34 +1,34 @@
 "use client";
 
 /**
- * useDragDrop – Drag & drop natif (HTML5 API) pour réordonner les widgets.
+ * useDragDrop – Drag & drop natif HTML5.
  *
- * Principe :
- *  - onDragStart : mémorise l'id du widget source
- *  - onDragOver  : highlight la cible (dropzone)
- *  - onDrop      : swap position+order entre source et cible, puis sauvegarde
+ * CORRECTION CRITIQUE : dragId doit être partagé globalement entre toutes
+ * les instances du hook. On utilise une variable module-level (singleton)
+ * car useRef est local à chaque composant et ne peut pas être partagé.
  */
 
-import { useRef } from "react";
 import { useWidgetStore } from "@/app/store/useWidgetStore";
-import type { WidgetConfig, WidgetPosition } from "@/app/types";
+import type { WidgetPosition } from "@/app/types";
+
+// ── Singleton partagé entre toutes les instances ──────────────────────────
+let globalDragId: string | null = null;
 
 export function useDragDrop() {
   const { widgets, reorderWidgets } = useWidgetStore();
-  const dragId = useRef<string | null>(null);
 
   const onDragStart = (id: string) => (e: React.DragEvent) => {
-    dragId.current = id;
+    globalDragId = id;
     e.dataTransfer.effectAllowed = "move";
-    // léger délai pour que le ghost soit visible avant l'opacité
-    requestAnimationFrame(() => {
-      (e.target as HTMLElement).style.opacity = "0.4";
-    });
+    e.dataTransfer.setData("text/plain", id); // fallback cross-browser
+    const el = e.currentTarget as HTMLElement;
+    requestAnimationFrame(() => { el.style.opacity = "0.45"; });
   };
 
   const onDragEnd = (e: React.DragEvent) => {
-    (e.target as HTMLElement).style.opacity = "1";
-    dragId.current = null;
+    const el = e.currentTarget as HTMLElement;
+    el.style.opacity = "1";
+    globalDragId = null;
   };
 
   const onDragOver = (e: React.DragEvent) => {
@@ -36,17 +36,23 @@ export function useDragDrop() {
     e.dataTransfer.dropEffect = "move";
   };
 
+  /** Drop widget-sur-widget → swap position + order */
   const onDrop = (targetId: string, targetPosition: WidgetPosition) => (e: React.DragEvent) => {
     e.preventDefault();
-    const srcId = dragId.current;
+    e.stopPropagation();
+    // Récupère l'id depuis le singleton OU depuis dataTransfer (fallback)
+    const srcId = globalDragId ?? e.dataTransfer.getData("text/plain");
+    globalDragId = null;
+
     if (!srcId || srcId === targetId) return;
 
-    const src = widgets.find((w) => w.id === srcId);
-    const tgt = widgets.find((w) => w.id === targetId);
+    // Relit les widgets depuis le store au moment du drop (état frais)
+    const current = useWidgetStore.getState().widgets;
+    const src = current.find((w) => w.id === srcId);
+    const tgt = current.find((w) => w.id === targetId);
     if (!src || !tgt) return;
 
-    // Swap position + order
-    const updated = widgets.map((w) => {
+    const updated = current.map((w) => {
       if (w.id === srcId) return { ...w, position: tgt.position, order: tgt.order };
       if (w.id === targetId) return { ...w, position: src.position, order: src.order };
       return w;
@@ -55,19 +61,25 @@ export function useDragDrop() {
     reorderWidgets(updated);
   };
 
-  /** Drop sur une zone vide (ex: colonne sans widgets) → déplace simplement le widget */
+  /** Drop sur une zone vide → déplace le widget vers cette zone */
   const onDropZone = (position: WidgetPosition) => (e: React.DragEvent) => {
     e.preventDefault();
-    const srcId = dragId.current;
+    e.stopPropagation();
+    const srcId = globalDragId ?? e.dataTransfer.getData("text/plain");
+    globalDragId = null;
+
     if (!srcId) return;
 
-    const src = widgets.find((w) => w.id === srcId);
+    const current = useWidgetStore.getState().widgets;
+    const src = current.find((w) => w.id === srcId);
     if (!src || src.position === position) return;
 
-    // Calcule le prochain order dans la colonne cible
-    const maxOrder = Math.max(0, ...widgets.filter((w) => w.position === position).map((w) => w.order)) + 1;
+    const sameZone = current.filter((w) => w.position === position);
+    const maxOrder = sameZone.length > 0
+      ? Math.max(...sameZone.map((w) => w.order)) + 1
+      : 0;
 
-    const updated = widgets.map((w) =>
+    const updated = current.map((w) =>
       w.id === srcId ? { ...w, position, order: maxOrder } : w
     );
     reorderWidgets(updated);

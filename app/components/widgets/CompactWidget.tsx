@@ -5,9 +5,13 @@ import { useDragDrop } from "@/app/hooks/useDragDrop";
 import type { WidgetConfig } from "@/app/types";
 import { useEffect, useState } from "react";
 
-interface Props { widget: WidgetConfig }
+interface Props {
+  widget: WidgetConfig;
+  /** Si fourni, remplace le comportement expandWidget (utilisé pour filtrer les non-focusables) */
+  onClickOverride?: () => void;
+}
 
-/* ── Contenu compact (inchangé) ─────────────────────────────────────────────── */
+/* ── Contenu compact ─────────────────────────────────────────────────────── */
 function CompactContent({ widget }: { widget: WidgetConfig }) {
   const [time, setTime] = useState("");
 
@@ -15,7 +19,7 @@ function CompactContent({ widget }: { widget: WidgetConfig }) {
     if (widget.type !== "clock") return;
     const tick = () => {
       const now = new Date();
-      setTime(now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+      setTime(now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -175,10 +179,22 @@ function CompactContent({ widget }: { widget: WidgetConfig }) {
 }
 
 /* ── CompactWidget avec drag & drop ─────────────────────────────────────────── */
-export function CompactWidget({ widget }: Props) {
+export function CompactWidget({ widget, onClickOverride }: Props) {
   const { expandWidget, removeWidget, toggleFavorite } = useWidgetStore();
   const { onDragStart, onDragEnd, onDragOver, onDrop } = useDragDrop();
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Détermine si ce widget est focusable (clickable vers zone centrale)
+  const isFocusable = onClickOverride !== undefined;
+  // undefined = non-focusable (clock, timer) => pas de handler click override fourni
+
+  const handleClick = () => {
+    if (onClickOverride) {
+      onClickOverride();
+    } else {
+      // Non-focusable : aucune action sur click (ou comportement in-place)
+    }
+  };
 
   return (
     <div
@@ -190,8 +206,8 @@ export function CompactWidget({ widget }: Props) {
       onDrop={(e) => { onDrop(widget.id, widget.position)(e); setIsDragOver(false); }}
       className={`widget-card group p-4 select-none transition-all ${
         isDragOver ? "border-[var(--accent)] bg-[var(--accent-light)] scale-[1.02]" : ""
-      }`}
-      onClick={() => expandWidget(widget.id)}
+      } ${!isFocusable ? "cursor-default" : "cursor-pointer"}`}
+      onClick={handleClick}
     >
       {/* Handle drag visuel */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
@@ -236,10 +252,16 @@ export function CompactWidget({ widget }: Props) {
 
       {/* Footer */}
       <div className="mt-2 pt-2 border-t border-[var(--border)] flex items-center justify-between">
-        <span className="text-[10px] text-[var(--text-3)]">Cliquer pour détailler</span>
-        <svg width="12" height="12" className="text-[var(--text-3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        {isFocusable ? (
+          <>
+            <span className="text-[10px] text-[var(--text-3)]">Cliquer pour détailler</span>
+            <svg width="12" height="12" className="text-[var(--text-3)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </>
+        ) : (
+          <span className="text-[10px] text-[var(--text-3)] italic">Mode in-place uniquement</span>
+        )}
       </div>
     </div>
   );

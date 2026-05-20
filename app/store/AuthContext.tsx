@@ -2,15 +2,14 @@
 
 /**
  * AuthContext – gestion des rôles admin/user.
- * Simule une authentification locale (pas de Supabase requis pour la démo).
- * En production : remplacer par Supabase Auth.
+ * Simule une authentification locale avec persistance sessionStorage.
  *
  * Rôles :
- *  - admin  → accès admin + drag & drop
- *  - user   → lecture seule, pas de drag & drop
+ *  - admin  → accès /admin + drag & drop avancé
+ *  - user   → lecture seule côté admin
  */
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type UserRole = "admin" | "user";
 
@@ -34,7 +33,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Comptes de démo – en production, remplacer par Supabase Auth
 const DEMO_ACCOUNTS: Record<string, AppUser & { password: string }> = {
   "admin@orbitdash.dev": {
     id: "admin-001",
@@ -62,28 +60,55 @@ const GUEST: AppUser = {
   avatarInitials: "IN",
 };
 
+const SESSION_KEY = "orbitdash-session";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Recharge la session depuis sessionStorage au montage
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      if (saved) setUser(JSON.parse(saved));
+    } catch {}
+    setHydrated(true);
+  }, []);
+
+  const persist = (u: AppUser | null) => {
+    try {
+      if (u) sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch {}
+  };
 
   const login = async (email: string, password: string) => {
     setError(null);
-    await new Promise((r) => setTimeout(r, 400)); // simule latence réseau
+    await new Promise((r) => setTimeout(r, 400));
     const account = DEMO_ACCOUNTS[email.toLowerCase()];
     if (!account || account.password !== password) {
       setError("Email ou mot de passe incorrect");
       throw new Error("Identifiants invalides");
     }
-    const { password: _, ...userWithoutPassword } = account;
-    setUser(userWithoutPassword);
+    const { password: _, ...u } = account;
+    setUser(u);
+    persist(u);
   };
 
   const loginAsGuest = () => {
     setError(null);
     setUser(GUEST);
+    persist(GUEST);
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    setUser(null);
+    persist(null);
+  };
+
+  // Empêche un flash du contenu avant hydration
+  if (!hydrated) return null;
 
   return (
     <AuthContext.Provider
