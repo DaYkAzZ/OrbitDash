@@ -17,7 +17,7 @@ import { CryptoWidgetExpanded }   from "./widgets/CryptoWidget";
 
 interface Props {
   widget: WidgetConfig;
-  inline?: boolean;          // true = affiché dans la zone centrale (pas modal)
+  inline?: boolean;
 }
 
 function WidgetContent({ widget, onClose }: { widget: WidgetConfig; onClose: () => void }) {
@@ -33,98 +33,125 @@ function WidgetContent({ widget, onClose }: { widget: WidgetConfig; onClose: () 
     case "timer":    return <TimerWidgetExpanded    widget={widget} onClose={onClose} />;
     case "quote":    return <QuoteWidgetExpanded    widget={widget} onClose={onClose} />;
     case "crypto":   return <CryptoWidgetExpanded   widget={widget} onClose={onClose} />;
-    default: return <div className="p-8 text-[var(--text-3)]">Widget non supporté : {widget.type}</div>;
+    default: return <div className="p-8 text-[var(--text-3)]">Widget : {widget.type}</div>;
   }
 }
 
-/** Affiché inline dans la zone centrale OU en modal plein écran */
+/* Couleurs d'accent par type de widget */
+const WIDGET_COLORS: Record<string, string> = {
+  clock:    "var(--neon-yellow)",
+  weather:  "var(--neon-cyan)",
+  stock:    "var(--neon-green)",
+  crypto:   "var(--neon-green)",
+  ainews:   "var(--neon-blue)",
+  notes:    "var(--neon-yellow)",
+  mood:     "var(--neon-pink)",
+  activity: "var(--neon-orange)",
+  music:    "var(--neon-purple)",
+  timer:    "var(--accent)",
+  quote:    "var(--neon-cyan)",
+};
+
 export function ExpandedWidgetModal({ widget, inline = false }: Props) {
-  const { collapseWidget, expandWidget } = useWidgetStore();
+  const { collapseWidget } = useWidgetStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleClose = () => { collapseWidget(); setIsFullscreen(false); };
+  const accentColor = WIDGET_COLORS[widget.type] ?? "var(--neon-yellow)";
 
-  // Inline = dans la zone centrale avec header propre
-  if (inline && !isFullscreen) {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">{widget.icon}</span>
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-1)]">{widget.title}</p>
-              <p className="text-xs text-[var(--text-3)]">{widget.description}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {/* Fullscreen */}
-            <button
-              onClick={() => setIsFullscreen(true)}
-              title="Plein écran"
-              className="btn-icon"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-              </svg>
-            </button>
-            {/* Fermer */}
-            <button onClick={handleClose} title="Fermer" className="btn-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
+  const Header = () => (
+    <div
+      className="flex items-center justify-between px-5 py-3 flex-none"
+      style={{
+        background: accentColor,
+        borderBottom: "2.5px solid var(--border)",
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-10 h-10 flex items-center justify-center text-xl"
+          style={{
+            background: "var(--bg-card)",
+            border: "2px solid var(--border)",
+            boxShadow: "2px 2px 0 var(--border)",
+          }}
+        >
+          {widget.icon}
         </div>
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          <WidgetContent widget={widget} onClose={handleClose} />
+        <div>
+          <p
+            className="font-black text-sm text-black uppercase tracking-wide"
+            style={{ fontFamily: "Space Mono" }}
+          >
+            {widget.title}
+          </p>
+          <p className="text-[11px] text-black/60 font-bold">{widget.description}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          title={isFullscreen ? "Réduire" : "Plein écran"}
+          className="w-8 h-8 flex items-center justify-center font-black text-black transition-all hover:scale-110"
+          style={{
+            background: "var(--bg-card)",
+            border: "2px solid var(--border)",
+            boxShadow: "2px 2px 0 var(--border)",
+            fontSize: "12px",
+          }}
+        >
+          {isFullscreen ? "⊡" : "⤢"}
+        </button>
+        <button
+          onClick={handleClose}
+          title="Fermer"
+          className="w-8 h-8 flex items-center justify-center font-black text-black transition-all hover:scale-110"
+          style={{
+            background: "var(--accent)",
+            border: "2px solid var(--border)",
+            boxShadow: "2px 2px 0 var(--border)",
+            color: "white",
+            fontSize: "14px",
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+
+  // Mode plein écran = overlay
+  if (isFullscreen) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-6"
+        style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+        onClick={handleClose}
+      >
+        <div
+          className="w-full max-w-4xl max-h-[90vh] flex flex-col anim-scale"
+          style={{
+            background: "var(--bg-card)",
+            border: "3px solid var(--border)",
+            boxShadow: "var(--shadow-neo-xl)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Header />
+          <div className="flex-1 overflow-y-auto">
+            <WidgetContent widget={widget} onClose={handleClose} />
+          </div>
         </div>
       </div>
     );
   }
 
-  // Modal plein écran (overlay)
+  // Mode inline dans la zone centrale
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      onClick={handleClose}
-    >
-      <div
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-xl)] overflow-hidden anim-scale"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[var(--accent-light)] flex items-center justify-center text-lg">
-              {widget.icon}
-            </div>
-            <div>
-              <p className="font-semibold text-[var(--text-1)]">{widget.title}</p>
-              <p className="text-xs text-[var(--text-3)]">{widget.description}</p>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            {!inline && (
-              <button onClick={() => setIsFullscreen(false)} title="Réduire" className="btn-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-                </svg>
-              </button>
-            )}
-            <button onClick={handleClose} title="Fermer" className="btn-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <WidgetContent widget={widget} onClose={handleClose} />
-        </div>
+    <div className="flex flex-col h-full">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
+        <WidgetContent widget={widget} onClose={handleClose} />
       </div>
     </div>
   );
