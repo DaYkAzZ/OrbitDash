@@ -1,123 +1,165 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { WidgetConfig, WidgetType, WidgetPosition, WidgetStoreState } from "@/app/types";
 
-// Types disponibles par défaut (admin peut en ajouter/retirer)
+/** Stockage partagé admin / invité / utilisateur (même navigateur) */
+export const SHARED_WIDGETS_KEY = "orbitdash-v2";
+
 const DEFAULT_AVAILABLE: WidgetType[] = [
-  "clock","weather","stock","crypto","ainews","notes","mood","activity","music","timer","quote"
+  "clock", "weather", "stock", "crypto", "ainews", "notes", "mood", "activity", "music", "timer", "quote",
 ];
+
+interface SharedSnapshot {
+  widgets: WidgetConfig[];
+  availableTypes: WidgetType[];
+}
+
+function readSharedSnapshot(): SharedSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(SHARED_WIDGETS_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as Record<string, unknown>;
+    // Compat ancien format zustand/persist : { state: { widgets, availableTypes }, version }
+    const payload = (parsed.state ?? parsed) as Record<string, unknown>;
+    return {
+      widgets: Array.isArray(payload.widgets) ? (payload.widgets as WidgetConfig[]) : [],
+      availableTypes: Array.isArray(payload.availableTypes)
+        ? (payload.availableTypes as WidgetType[])
+        : DEFAULT_AVAILABLE,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeSharedSnapshot(widgets: WidgetConfig[], availableTypes: WidgetType[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(
+    SHARED_WIDGETS_KEY,
+    JSON.stringify({ widgets, availableTypes }),
+  );
+}
 
 interface ExtendedWidgetStore extends WidgetStoreState {
   availableTypes: WidgetType[];
-  enableType:  (type: WidgetType) => void;
+  enableType: (type: WidgetType) => void;
   disableType: (type: WidgetType) => void;
 }
 
-export const useWidgetStore = create<ExtendedWidgetStore>()(
-  persist(
-    (set, get) => ({
-      widgets: [],
+export const useWidgetStore = create<ExtendedWidgetStore>()((set, get) => ({
+  widgets: [],
+  expandedWidgetId: null,
+  isLoading: false,
+  error: null,
+  availableTypes: DEFAULT_AVAILABLE,
+
+  enableType: (type) => {
+    set((s) => ({
+      availableTypes: s.availableTypes.includes(type)
+        ? s.availableTypes
+        : [...s.availableTypes, type],
+    }));
+    get().saveWidgets();
+  },
+
+  disableType: (type) => {
+    set((s) => ({
+      availableTypes: s.availableTypes.filter((t) => t !== type),
+      widgets: s.widgets.filter((w) => w.type !== type),
+      expandedWidgetId:
+        s.widgets.find((w) => w.id === s.expandedWidgetId)?.type === type
+          ? null
+          : s.expandedWidgetId,
+    }));
+    get().saveWidgets();
+  },
+
+  addWidget: (type, position) => {
+    if (!get().availableTypes.includes(type)) return "";
+    const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const widget = createDefaultWidget(type, position, id);
+    set((s) => ({ widgets: [...s.widgets, { ...widget, order: s.widgets.length }] }));
+    get().saveWidgets();
+    return id;
+  },
+
+  removeWidget: (id) => {
+    set((s) => ({
+      widgets: s.widgets.filter((w) => w.id !== id),
+      expandedWidgetId: s.expandedWidgetId === id ? null : s.expandedWidgetId,
+    }));
+    get().saveWidgets();
+  },
+
+  expandWidget: (id) => set({ expandedWidgetId: id }),
+  collapseWidget: () => set({ expandedWidgetId: null }),
+
+  toggleFavorite: (id) => {
+    set((s) => ({
+      widgets: s.widgets.map((w) => (w.id === id ? { ...w, isFavorite: !w.isFavorite } : w)),
+    }));
+    get().saveWidgets();
+  },
+
+  updateWidgetData: (id, data) => {
+    set((s) => ({
+      widgets: s.widgets.map((w) =>
+        w.id === id
+          ? { ...w, data: { ...w.data, ...data }, metadata: { ...w.metadata, updatedAt: Date.now() } }
+          : w,
+      ),
+    }));
+    get().saveWidgets();
+  },
+
+  reorderWidgets: (widgets) => {
+    set({ widgets });
+    get().saveWidgets();
+  },
+
+  loadWidgets: () => {
+    set({ isLoading: true });
+    try {
+      if (typeof window === "undefined") {
+        set({ isLoading: false });
+        return;
+      }
+      const snapshot = readSharedSnapshot();
+      if (snapshot) {
+        set({
+          widgets: snapshot.widgets,
+          availableTypes: snapshot.availableTypes,
+          isLoading: false,
+        });
+      } else {
+        const defaults = createDefaultDashboard();
+        set({
+          widgets: defaults,
+          availableTypes: DEFAULT_AVAILABLE,
+          isLoading: false,
+        });
+        writeSharedSnapshot(defaults, DEFAULT_AVAILABLE);
+      }
+    } catch {
+      set({ isLoading: false, widgets: createDefaultDashboard() });
+    }
+  },
+
+  saveWidgets: () => {
+    writeSharedSnapshot(get().widgets, get().availableTypes);
+  },
+
+  resetWidgets: () => {
+    set({
+      widgets: createDefaultDashboard(),
       expandedWidgetId: null,
-      isLoading: false,
-      error: null,
       availableTypes: DEFAULT_AVAILABLE,
+    });
+    get().saveWidgets();
+  },
 
-      enableType: (type) =>
-        set((s) => ({
-          availableTypes: s.availableTypes.includes(type)
-            ? s.availableTypes
-            : [...s.availableTypes, type],
-        })),
-
-      disableType: (type) =>
-        set((s) => ({
-          availableTypes: s.availableTypes.filter((t) => t !== type),
-          // Retire aussi les widgets actifs de ce type
-          widgets: s.widgets.filter((w) => w.type !== type),
-          expandedWidgetId:
-            s.widgets.find((w) => w.id === s.expandedWidgetId)?.type === type
-              ? null
-              : s.expandedWidgetId,
-        })),
-
-      addWidget: (type, position) => {
-        // Ne peut ajouter que si le type est disponible
-        if (!get().availableTypes.includes(type)) return "";
-        const id = `widget-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const widget = createDefaultWidget(type, position, id);
-        set((s) => ({ widgets: [...s.widgets, { ...widget, order: s.widgets.length }] }));
-        get().saveWidgets();
-        return id;
-      },
-
-      removeWidget: (id) => {
-        set((s) => ({
-          widgets: s.widgets.filter((w) => w.id !== id),
-          expandedWidgetId: s.expandedWidgetId === id ? null : s.expandedWidgetId,
-        }));
-        get().saveWidgets();
-      },
-
-      expandWidget:   (id) => set({ expandedWidgetId: id }),
-      collapseWidget: ()   => set({ expandedWidgetId: null }),
-
-      toggleFavorite: (id) => {
-        set((s) => ({
-          widgets: s.widgets.map((w) => w.id === id ? { ...w, isFavorite: !w.isFavorite } : w),
-        }));
-        get().saveWidgets();
-      },
-
-      updateWidgetData: (id, data) => {
-        set((s) => ({
-          widgets: s.widgets.map((w) =>
-            w.id === id
-              ? { ...w, data: { ...w.data, ...data }, metadata: { ...w.metadata, updatedAt: Date.now() } }
-              : w
-          ),
-        }));
-        get().saveWidgets();
-      },
-
-      reorderWidgets: (widgets) => { set({ widgets }); get().saveWidgets(); },
-
-      loadWidgets: () => {
-        set({ isLoading: true });
-        try {
-          if (typeof window === "undefined") { set({ isLoading: false }); return; }
-          const stored = localStorage.getItem("orbitdash-v2");
-          if (stored) {
-            const data = JSON.parse(stored);
-            set({
-              widgets: data.widgets || [],
-              availableTypes: data.availableTypes ?? DEFAULT_AVAILABLE,
-              isLoading: false,
-            });
-          } else {
-            set({ widgets: createDefaultDashboard(), availableTypes: DEFAULT_AVAILABLE, isLoading: false });
-            get().saveWidgets();
-          }
-        } catch { set({ isLoading: false, widgets: createDefaultDashboard() }); }
-      },
-
-      saveWidgets: () => {
-        if (typeof window === "undefined") return;
-        localStorage.setItem("orbitdash-v2", JSON.stringify({
-          widgets: get().widgets,
-          availableTypes: get().availableTypes,
-        }));
-      },
-
-      resetWidgets: () => {
-        set({ widgets: createDefaultDashboard(), expandedWidgetId: null, availableTypes: DEFAULT_AVAILABLE });
-        get().saveWidgets();
-      },
-
-      getWidget: (id) => get().widgets.find((w) => w.id === id),
-    }),
-    { name: "orbitdash-v2", version: 3 }
-  )
-);
+  getWidget: (id) => get().widgets.find((w) => w.id === id),
+}));
 
 // ── Catalogue ──────────────────────────────────────────────────────────────
 export const WIDGET_CATALOG = [
@@ -134,7 +176,6 @@ export const WIDGET_CATALOG = [
   { type: "quote",    title: "Citation",   description: "Citation inspirante du jour",  icon: "💬", category: "divertissement", color: "#3B82F6" },
 ] as const;
 
-// ── createDefaultWidget ────────────────────────────────────────────────────
 function base(type: WidgetType, position: WidgetPosition, id: string): WidgetConfig {
   const now = Date.now();
   const cat = WIDGET_CATALOG.find((c) => c.type === type);

@@ -149,7 +149,7 @@ function WidgetDataEditor({ widgetId, onClose }: { widgetId: string; onClose: ()
 export default function AdminPage() {
   const router = useRouter();
   const { user, isAdmin, isAuthenticated, logout } = useAuth();
-  const { widgets, removeWidget, resetWidgets, reorderWidgets, availableTypes, enableType, disableType } = useWidgetStore();
+  const { widgets, removeWidget, resetWidgets, reorderWidgets, availableTypes, enableType, disableType, loadWidgets } = useWidgetStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toggleMsg, setToggleMsg] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("tous");
@@ -157,8 +157,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isAuthenticated) { router.replace("/login"); return; }
-    if (!isAdmin) { router.replace("/"); }
-  }, [isAuthenticated, isAdmin, router]);
+    if (!isAdmin) { router.replace("/"); return; }
+    loadWidgets();
+  }, [isAuthenticated, isAdmin, router, loadWidgets]);
 
   if (!isAdmin) return null;
 
